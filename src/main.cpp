@@ -105,7 +105,7 @@ class Order{
         }
 };
 Player p1(window_w/2, window_h/2);
-Order orders[10];
+int orders[10];
 int orders_lengh = 0;
 class Mount_block{
     private:
@@ -196,14 +196,14 @@ class Delivery_block{
                 for (int x = 0; x < orders_lengh; x++){
                     // se a player entregar um prato, é verificado se o prato está na lista, se estiver, ele é removido
                     if (p1.carrying_dish == 1){
-                        if (orders[x].n1 == 1 && orders[x].n2 == 2 && orders[x].n3 == 0 && orders[x].n4 == 0 && orders[x].n5 == 0){
-                            orders[x].reset();
+                        if (orders[x] == 1){
+                            orders[x] = 0;
                             p1.carrying_dish = 0;
                         }
                     }
                     else if (p1.carrying_dish == 2){
-                        if (orders[x].n1 == 1 && orders[x].n2 == 2 && orders[x].n3 == 3 && orders[x].n4 == 0 && orders[x].n5 == 0){
-                            orders[x].reset();
+                        if (orders[x] == 2){
+                            orders[x] = 0;
                             p1.carrying_dish = 0;
                         }
                     }
@@ -375,7 +375,7 @@ class Cook_block{
             }
         }
 };
-void create_order(Order o){
+void create_order(int o){
     orders[orders_lengh] = o;
     orders_lengh++;
 }
@@ -418,8 +418,7 @@ class Client{
                 case WAITING:
                     static bool created = false;
                     if (!(created)){
-                        Order o;
-                        o.build(1, 2, GetRandomValue(0, 1) == 1 ? 3: 0, 0, 0);
+                        int o = GetRandomValue(0, 1) == 1 ? 1: 2;
                         create_order(o);
                         created = true;
                     }
@@ -436,12 +435,12 @@ class Client{
             }
         }
 };
-const char* GetOrderName(Order o){
+const char* GetOrderName(int o){
     const char* order_name = "";
-    if (o.n1 == 1 && o.n2 == 2){
+    if (o == 1){
         order_name = "Arroz e Feijão";
     }
-    if (o.n1 == 1 && o.n2 == 2 && o.n3 == 3){
+    if (o == 2){
         order_name = "Arroz e Feijão e Bife";
     }
     return order_name;
