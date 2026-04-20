@@ -1,12 +1,15 @@
 #include <cstdlib>
 #include <cstring>
+#include <ostream>
 #include <raylib.h>
 #include <iostream>
+#include <string>
 
 using namespace std;
 
 float window_w = 1280;
 float window_h = 720;
+int points = 0;
 // array de ingredientes cru, para não serem adicionados ao prato
 int crudes[] = {1, 2, 3};
 int crudes_lengh = 3;
@@ -394,10 +397,14 @@ class Client{
         }
         void draw(){
             DrawRectangle(x, y, 10, 10, GRAY);
-            DrawRectangle(target.x, target.y, 10, 10, RED);
+            //DrawRectangle(target.x, target.y, 10, 10, RED);
         }
         void process(){
             static float counter = 0;
+            static int order_id = -1;
+            static int earn_points = 5;
+            static int o = GetRandomValue(0, 1) == 1 ? 1: 2;
+            cout << counter << endl;
             switch (state) {
                 case SEARCHING:
                     if (x != target.x){
@@ -407,30 +414,64 @@ class Client{
                         counter += GetFrameTime();
                         if (y != target.y && counter >= 0.5f){
                             y -= 2;
-                            //counter = 0;
                         }
                         else if (x == target.x && y == target.y){
                             state = WAITING;
-                            counter = 0;
+                            counter = 0.0f;
                         }
                     }
                     break;
                 case WAITING:
                     static bool created = false;
                     if (!(created)){
-                        int o = GetRandomValue(0, 1) == 1 ? 1: 2;
                         create_order(o);
                         created = true;
+                        for (int x = 0; x < orders_lengh; x++){
+                            if (orders[x] == o){
+                                order_id = x;
+                            }
+                        }
                     }
                     else{
                         counter += GetFrameTime();
                     }
+                    if (counter >= 20.0f){
+                        earn_points = 2;
+                        state = ANGRY;
+                        counter = 0.0f;
+                    }
+                    if (order_id != -1){
+                        if (orders[order_id] == 0){
+                            state = LEAVING;
+                        }
+                    }
                     break;
                 case ANGRY:
-                    // ficou bravo pelo tempo de espera, desconto nos pontos
+                    counter += GetFrameTime();
+                    if (counter >= 100.0f){
+                        earn_points = -5;
+                        state = LEAVING;
+                    }
+                    if (order_id != -1){
+                        if (orders[order_id] == 0){
+                            state = LEAVING;
+                        }
+                    }
                     break;
                 case LEAVING:
-                    // logica de sair de seu lugar e ir embora
+                    if (y < window_h/2 - 200){
+                        y += 2;
+                    }
+                    else{
+                        if (x < window_w - 10){
+                            x += 2;
+                        }
+                    }
+                    if (x == window_w - 10 && y == window_h/2 - 200){
+                        points += earn_points;
+                        x = 999;
+                        y = 999;
+                    }
                     break;
             }
         }
@@ -457,6 +498,7 @@ Ingredient_block ingredient_block2;
 Ingredient_block ingredient_block3;
 Trash_block trash_block;
 Cook_block cook_block;
+Cook_block cook_block2;
 Client client1;
 int main(){
     cout << "";
@@ -469,10 +511,14 @@ int main(){
     ingredient_block3.build(300, 400, YELLOW, 3, "Bife cru");
     trash_block.build(300, 450, BROWN);
     cook_block.build(window_w/2 - 50, 300, BEIGE);
+    cook_block2.build(window_w/2 - 100, 300, BEIGE);
     client1.build(window_w/2 - 200, 100);
     while (!(WindowShouldClose())) {
         ClearBackground(RAYWHITE);
         BeginDrawing();
+            string s = to_string(points);
+            const char* s_c = s.c_str();
+            DrawText(s_c, window_w - MeasureText(s_c, 30), 0, 30, BLUE);
             cout << mount_point.dish << endl;
             p1.draw();
             p1.process();
@@ -491,6 +537,8 @@ int main(){
             trash_block.process();
             cook_block.draw();
             cook_block.process();
+            cook_block2.draw();
+            cook_block2.process();
             client1.draw();
             client1.process();
         EndDrawing();
