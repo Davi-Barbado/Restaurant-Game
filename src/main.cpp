@@ -374,6 +374,20 @@ class Cook_block{
             }
         }
 };
+class Client{
+    public:
+        float x, y;
+        Vector2 target;
+        void build(float target_x, float target_y){
+            x = window_w - 10;
+            y =  window_h/2 - 200;
+            target.x = target_x;
+            target_y = target_y;
+        }
+        void draw(){
+            DrawRectangle(target.x, target.y, 10, 10, GRAY);
+        }
+};
 void create_order(Order o){
     orders[orders_lengh] = o;
     orders_lengh++;
@@ -395,6 +409,7 @@ Ingredient_block ingredient_block2;
 Ingredient_block ingredient_block3;
 Trash_block trash_block;
 Cook_block cook_block;
+Client client1;
 int main(){
     cout << "";
     InitWindow(window_w, window_h, "Game Jam");
@@ -412,6 +427,7 @@ int main(){
     ingredient_block3.build(300, 400, YELLOW, 3, "Bife cru");
     trash_block.build(300, 450, BROWN);
     cook_block.build(window_w/2 - 50, 300, BEIGE);
+    client1.build(window_w/2, 500.0f);
     while (!(WindowShouldClose())) {
         ClearBackground(RAYWHITE);
         BeginDrawing();
@@ -434,6 +450,7 @@ int main(){
             trash_block.process();
             cook_block.draw();
             cook_block.process();
+            client1.draw();
         EndDrawing();
     }
     CloseWindow();
