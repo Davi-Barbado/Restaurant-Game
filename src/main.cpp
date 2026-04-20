@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <cstring>
 #include <raylib.h>
 #include <iostream>
@@ -374,24 +375,67 @@ class Cook_block{
             }
         }
 };
+void create_order(Order o){
+    orders[orders_lengh] = o;
+    orders_lengh++;
+}
 class Client{
     public:
         float x, y;
+        enum State {SEARCHING, WAITING, ANGRY, LEAVING};
+        State state;
         Vector2 target;
         void build(float target_x, float target_y){
             x = window_w - 10;
             y =  window_h/2 - 200;
             target.x = target_x;
-            target_y = target_y;
+            target.y = target_y;
+            state = SEARCHING;
         }
         void draw(){
-            DrawRectangle(target.x, target.y, 10, 10, GRAY);
+            DrawRectangle(x, y, 10, 10, GRAY);
+            DrawRectangle(target.x, target.y, 10, 10, RED);
+        }
+        void process(){
+            static float counter = 0;
+            switch (state) {
+                case SEARCHING:
+                    if (x != target.x){
+                        x -= 2;
+                    }
+                    else{
+                        counter += GetFrameTime();
+                        if (y != target.y && counter >= 0.5f){
+                            y -= 2;
+                            //counter = 0;
+                        }
+                        else if (x == target.x && y == target.y){
+                            state = WAITING;
+                            counter = 0;
+                        }
+                    }
+                    break;
+                case WAITING:
+                    static bool created = false;
+                    if (!(created)){
+                        Order o;
+                        o.build(1, 2, GetRandomValue(0, 1) == 1 ? 3: 0, 0, 0);
+                        create_order(o);
+                        created = true;
+                    }
+                    else{
+                        counter += GetFrameTime();
+                    }
+                    break;
+                case ANGRY:
+                    // ficou bravo pelo tempo de espera, desconto nos pontos
+                    break;
+                case LEAVING:
+                    // logica de sair de seu lugar e ir embora
+                    break;
+            }
         }
 };
-void create_order(Order o){
-    orders[orders_lengh] = o;
-    orders_lengh++;
-}
 const char* GetOrderName(Order o){
     const char* order_name = "";
     if (o.n1 == 1 && o.n2 == 2){
@@ -401,6 +445,11 @@ const char* GetOrderName(Order o){
         order_name = "Arroz e Feijão e Bife";
     }
     return order_name;
+}
+void Draw_Orders(){
+    for (int x = 0; x < orders_lengh; x++){
+        DrawText(GetOrderName(orders[x]), 0, 30 * x, 30, BLACK);
+    }
 }
 Mount_block mount_point;
 Delivery_block delivery_point;
@@ -414,12 +463,6 @@ int main(){
     cout << "";
     InitWindow(window_w, window_h, "Game Jam");
     SetTargetFPS(60);
-    Order o;
-    o.build(1, 2, 0, 0, 0);
-    create_order(o);
-    Order o2;
-    o2.build(1, 2, 3, 0, 0);
-    create_order(o2);
     mount_point.build(window_w/2, 300, 50, 50);
     delivery_point.build(window_w/2 + 200, 300, 50, 50);
     ingredient_block1.build(300, 300, RED, 1, "Arroz cru");
@@ -427,15 +470,14 @@ int main(){
     ingredient_block3.build(300, 400, YELLOW, 3, "Bife cru");
     trash_block.build(300, 450, BROWN);
     cook_block.build(window_w/2 - 50, 300, BEIGE);
-    client1.build(window_w/2, 500.0f);
+    client1.build(window_w/2 - 200, 100);
     while (!(WindowShouldClose())) {
         ClearBackground(RAYWHITE);
         BeginDrawing();
             cout << mount_point.dish << endl;
             p1.draw();
             p1.process();
-            DrawText(GetOrderName(orders[0]), 0, 0, 30, BLACK);
-            DrawText(GetOrderName(orders[1]), 0, 30, 30, BLACK);   
+            Draw_Orders();
             mount_point.draw(); 
             mount_point.process();  
             ingredient_block1.draw();     
@@ -451,6 +493,7 @@ int main(){
             cook_block.draw();
             cook_block.process();
             client1.draw();
+            client1.process();
         EndDrawing();
     }
     CloseWindow();
