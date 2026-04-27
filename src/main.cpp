@@ -525,15 +525,16 @@ Vector2 chair_posision[] = {
 };
 void gen_client(){
     int y_static = 0;
-    for (int x = 0; x < CLIENTS_LENGH; x++){
-        for (int y = 0; y < 10; y++){
+    for (int y = 0; y < 10; y++){
             if (chairs_logical[y] == false){
                 y_static = y;
                 chairs_logical[y] = true;
                 break;
             }
-        }
+    }
+    for (int x = 0; x < CLIENTS_LENGH; x++){
         if (client[x].active == false){
+            cout << "Y_STATIC: " + to_string(y_static) << endl;
             client[x].build(chair_posision[y_static].x, chair_posision[y_static].y);
             client[x].active = true;
             client[x].x += x * 20;
