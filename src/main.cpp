@@ -4,6 +4,7 @@
 #include <raylib.h>
 #include <iostream>
 #include <string>
+#define CLIENTS_LENGH 10
 
 using namespace std;
 
@@ -382,37 +383,47 @@ void create_order(int o){
     orders[orders_lengh] = o;
     orders_lengh++;
 }
+int clients_lengh = 0;
 class Client{
+    private:
+        float counter;
+        int order_id;
+        int earn_points;
+        int o;
+        bool created;
     public:
+        bool is_colliding;
         float x, y;
         enum State {SEARCHING, WAITING, ANGRY, LEAVING};
         State state;
         Vector2 target;
+        bool active = false;
         void build(float target_x, float target_y){
             x = window_w - 10;
             y =  window_h/2 - 200;
             target.x = target_x;
             target.y = target_y;
             state = SEARCHING;
+            counter = 0;
+            order_id = -1;
+            earn_points = 5;
+            o = GetRandomValue(0, 1) == 1 ? 1: 2;
+            created = false;
+            is_colliding = false;
         }
         void draw(){
             DrawRectangle(x, y, 10, 10, GRAY);
             //DrawRectangle(target.x, target.y, 10, 10, RED);
         }
         void process(){
-            static float counter = 0;
-            static int order_id = -1;
-            static int earn_points = 5;
-            static int o = GetRandomValue(0, 1) == 1 ? 1: 2;
-            cout << counter << endl;
             switch (state) {
                 case SEARCHING:
-                    if (x != target.x){
+                    if (x != target.x && !(is_colliding)){
                         x -= 2;
                     }
                     else{
                         counter += GetFrameTime();
-                        if (y != target.y && counter >= 0.5f){
+                        if (y != target.y && counter >= 0.5f && !(is_colliding)){
                             y -= 2;
                         }
                         else if (x == target.x && y == target.y){
@@ -422,7 +433,6 @@ class Client{
                     }
                     break;
                 case WAITING:
-                    static bool created = false;
                     if (!(created)){
                         create_order(o);
                         created = true;
@@ -435,7 +445,7 @@ class Client{
                     else{
                         counter += GetFrameTime();
                     }
-                    if (counter >= 20.0f){
+                    if (counter >= 500.0f){
                         earn_points = 2;
                         state = ANGRY;
                         counter = 0.0f;
@@ -459,21 +469,25 @@ class Client{
                     }
                     break;
                 case LEAVING:
-                    if (y < window_h/2 - 200){
+                    if (y < window_h/2 - 200 && !(is_colliding)){
                         y += 2;
                     }
                     else{
-                        if (x < window_w - 10){
+                        if (x < window_w - 10 && !(is_colliding)){
                             x += 2;
                         }
                     }
                     if (x == window_w - 10 && y == window_h/2 - 200){
                         points += earn_points;
-                        x = 999;
-                        y = 999;
+                        active = false;
+                        if (order_id != -1) orders[order_id] = 0;
+                        clients_lengh--;
                     }
                     break;
             }
+        }
+        void push(){
+            x += 20;
         }
 };
 const char* GetOrderName(int o){
@@ -488,7 +502,9 @@ const char* GetOrderName(int o){
 }
 void Draw_Orders(){
     for (int x = 0; x < orders_lengh; x++){
-        DrawText(GetOrderName(orders[x]), 0, 30 * x, 30, BLACK);
+        if (orders[x] != 0){
+            DrawText(GetOrderName(orders[x]), 0, 30 * x, 30, BLACK);
+        }
     }
 }
 Mount_block mount_point;
@@ -499,7 +515,48 @@ Ingredient_block ingredient_block3;
 Trash_block trash_block;
 Cook_block cook_block;
 Cook_block cook_block2;
-Client client1;
+Client *client = new Client[10];
+void gen_client(int target_x, int target_y){
+    for (int x = 0; x < CLIENTS_LENGH; x++){
+        if (client[x].active == false){
+            client[x].build(target_x, target_y);
+            client[x].active = true;
+            return;
+        }
+    }
+}
+void run_clients(){
+    for (int x = 0; x < CLIENTS_LENGH; x++){
+        if (client[x].active == true){
+            client[x].draw();
+            client[x].process();
+        }
+    }
+}
+void check_collision(){
+    for (int x = 0; x < CLIENTS_LENGH; x++){
+        if (client[x].active == true){
+            if (x + 1 < CLIENTS_LENGH){
+                if (CheckCollisionRecs({client[x].x, client[x].y, 10, 10}, {client[x + 1].x, client[x + 1].y, 10, 10})){
+                    client[x].push();
+                }
+                else if (CheckCollisionRecs(p1.hitbox, {client[x].x, client[x].y, 10, 10})){
+                    client[x].is_colliding = true;
+                }
+                else{
+                    client[x].is_colliding = false;
+                }
+            }
+        }
+    }
+}
+bool chairs_logical[] = {
+    false, false, false, false, false,
+    false, false, false, false, false
+};
+Vector2 chair_posision[] = {
+    {540, 100}, {640, 100}
+};
 int main(){
     cout << "";
     InitWindow(window_w, window_h, "Game Jam");
@@ -512,14 +569,18 @@ int main(){
     trash_block.build(300, 450, BROWN);
     cook_block.build(window_w/2 - 50, 300, BEIGE);
     cook_block2.build(window_w/2 - 100, 300, BEIGE);
-    client1.build(window_w/2 - 200, 100);
+    gen_client(chair_posision[0].x, chair_posision[0].y);
     while (!(WindowShouldClose())) {
         ClearBackground(RAYWHITE);
         BeginDrawing();
+            int MPOSX = GetMouseX();
+            int MPOSY = GetMouseY();
+            string MPOSSF = "X: " + to_string(MPOSX) + "Y: " + to_string(MPOSY);
+            const char* MPOSSFCS = MPOSSF.c_str();
+            DrawText(MPOSSFCS, 0, window_h - 20, 20, BLUE);
             string s = to_string(points);
             const char* s_c = s.c_str();
             DrawText(s_c, window_w - MeasureText(s_c, 30), 0, 30, BLUE);
-            cout << mount_point.dish << endl;
             p1.draw();
             p1.process();
             Draw_Orders();
@@ -539,9 +600,10 @@ int main(){
             cook_block.process();
             cook_block2.draw();
             cook_block2.process();
-            client1.draw();
-            client1.process();
+            run_clients();
+            check_collision();
         EndDrawing();
     }
+    delete [] client;
     CloseWindow();
 }
