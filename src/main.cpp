@@ -413,7 +413,7 @@ class Client{
         }
         void draw(){
             DrawRectangle(x, y, 10, 10, GRAY);
-            //DrawRectangle(target.x, target.y, 10, 10, RED);
+            DrawRectangle(target.x, target.y, 10, 10, RED);
         }
         void process(){
             switch (state) {
@@ -516,11 +516,27 @@ Trash_block trash_block;
 Cook_block cook_block;
 Cook_block cook_block2;
 Client *client = new Client[10];
-void gen_client(int target_x, int target_y){
+bool chairs_logical[] = {
+    false, false, false, false, false,
+    false, false, false, false, false
+};
+Vector2 chair_posision[] = {
+    {540, 100}, {640, 100}, {740, 100}
+};
+void gen_client(){
+    int y_static = 0;
     for (int x = 0; x < CLIENTS_LENGH; x++){
+        for (int y = 0; y < 10; y++){
+            if (chairs_logical[y] == false){
+                y_static = y;
+                chairs_logical[y] = true;
+                break;
+            }
+        }
         if (client[x].active == false){
-            client[x].build(target_x, target_y);
+            client[x].build(chair_posision[y_static].x, chair_posision[y_static].y);
             client[x].active = true;
+            client[x].x += x * 20;
             return;
         }
     }
@@ -537,10 +553,7 @@ void check_collision(){
     for (int x = 0; x < CLIENTS_LENGH; x++){
         if (client[x].active == true){
             if (x + 1 < CLIENTS_LENGH){
-                if (CheckCollisionRecs({client[x].x, client[x].y, 10, 10}, {client[x + 1].x, client[x + 1].y, 10, 10})){
-                    client[x].push();
-                }
-                else if (CheckCollisionRecs(p1.hitbox, {client[x].x, client[x].y, 10, 10})){
+                if (CheckCollisionRecs(p1.hitbox, {client[x].x, client[x].y, 10, 10})){
                     client[x].is_colliding = true;
                 }
                 else{
@@ -550,13 +563,6 @@ void check_collision(){
         }
     }
 }
-bool chairs_logical[] = {
-    false, false, false, false, false,
-    false, false, false, false, false
-};
-Vector2 chair_posision[] = {
-    {540, 100}, {640, 100}
-};
 int main(){
     cout << "";
     InitWindow(window_w, window_h, "Game Jam");
@@ -569,7 +575,9 @@ int main(){
     trash_block.build(300, 450, BROWN);
     cook_block.build(window_w/2 - 50, 300, BEIGE);
     cook_block2.build(window_w/2 - 100, 300, BEIGE);
-    gen_client(chair_posision[0].x, chair_posision[0].y);
+    gen_client();
+    gen_client();
+    gen_client();
     while (!(WindowShouldClose())) {
         ClearBackground(RAYWHITE);
         BeginDrawing();
