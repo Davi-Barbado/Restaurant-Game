@@ -10,6 +10,7 @@ using namespace std;
 
 float window_w = 1280;
 float window_h = 720;
+Font font;
 int points = 0;
 // array de ingredientes cru, para não serem adicionados ao prato
 int crudes[] = {1, 2, 3};
@@ -392,6 +393,7 @@ class Client{
         int o;
         bool created;
     public:
+        float timer;
         bool is_colliding;
         float x, y;
         enum State {SEARCHING, WAITING, ANGRY, LEAVING};
@@ -410,10 +412,11 @@ class Client{
             o = GetRandomValue(0, 1) == 1 ? 1: 2;
             created = false;
             is_colliding = false;
+            timer = 0;
         }
         void draw(){
             DrawRectangle(x, y, 10, 10, GRAY);
-            DrawRectangle(target.x, target.y, 10, 10, RED);
+            //DrawRectangle(target.x, target.y, 10, 10, RED);
         }
         void process(){
             switch (state) {
@@ -424,7 +427,12 @@ class Client{
                     else{
                         counter += GetFrameTime();
                         if (y != target.y && counter >= 0.5f && !(is_colliding)){
-                            y -= 2;
+                            if (y < target.y){
+                                y += 2;
+                            }
+                            else if (y > target.y){
+                                y -= 2;
+                            }
                         }
                         else if (x == target.x && y == target.y){
                             state = WAITING;
@@ -444,8 +452,10 @@ class Client{
                     }
                     else{
                         counter += GetFrameTime();
+                        timer += GetFrameTime();
+                        cout << counter << endl;
                     }
-                    if (counter >= 500.0f){
+                    if (counter >= 360.0f){
                         earn_points = 2;
                         state = ANGRY;
                         counter = 0.0f;
@@ -469,8 +479,13 @@ class Client{
                     }
                     break;
                 case LEAVING:
-                    if (y < window_h/2 - 200 && !(is_colliding)){
-                        y += 2;
+                    if (y != window_h/2 - 200 && !(is_colliding)){
+                        if (y < window_h/2 - 200){
+                            y += 2;
+                        }
+                        else if (y > window_h/2 - 200){
+                            y -= 2;
+                        }
                     }
                     else{
                         if (x < window_w - 10 && !(is_colliding)){
@@ -493,17 +508,33 @@ class Client{
 const char* GetOrderName(int o){
     const char* order_name = "";
     if (o == 1){
-        order_name = "Arroz e Feijão";
+        order_name = "Arroz e Feijao";
     }
     if (o == 2){
-        order_name = "Arroz e Feijão e Bife";
+        order_name = "Arroz e Feijao e Bife";
     }
     return order_name;
 }
+Client *client = new Client[10];
 void Draw_Orders(){
     for (int x = 0; x < orders_lengh; x++){
         if (orders[x] != 0){
-            DrawText(GetOrderName(orders[x]), 0, 30 * x, 30, BLACK);
+            DrawTextEx(font,GetOrderName(orders[x]), {0, 50.0f * x}, 30,5, BLACK);
+            string s = TextFormat("Time: %.0f", client[x].timer);
+            const char* s_c = s.c_str();
+            //DrawText(s_c, MeasureText(GetOrderName(orders[x]), 30) + 2, 30 * x, 30, BLACK);
+            Color c;
+            if (client[x].timer < 180){
+                c = BLUE;
+            }
+            else if (client[x].timer > 180 && client[x].timer < 270){
+                c = YELLOW;
+            }
+            else{
+                c = RED;
+            }
+            DrawRectanglePro({(float)MeasureText(GetOrderName(orders[x]), 30) + 20, 50.0f * x + 20, 5, 20}, {5.0f/2, 20.0f}, client[x].timer, c);
+            //DrawRectanglePro({(float)GetMouseX(), (float)GetMouseY(), 20,20}, {20.0f/2,20.0f/2}, 0, BLUE);
         }
     }
 }
@@ -515,16 +546,16 @@ Ingredient_block ingredient_block3;
 Trash_block trash_block;
 Cook_block cook_block;
 Cook_block cook_block2;
-Client *client = new Client[10];
 bool chairs_logical[] = {
     false, false, false, false, false,
     false, false, false, false, false
 };
 Vector2 chair_posision[] = {
-    {540, 100}, {640, 100}, {740, 100}
+    {540, 100}, {640, 100}, {740, 100}, {840, 100}, {940, 100},
+    {540, 200}, {640, 200}, {740, 200}, {840, 200}, {940, 200}
 };
 void gen_client(){
-    int y_static = 0;
+    int y_static = -1;
     for (int y = 0; y < 10; y++){
             if (chairs_logical[y] == false){
                 y_static = y;
@@ -533,8 +564,8 @@ void gen_client(){
             }
     }
     for (int x = 0; x < CLIENTS_LENGH; x++){
-        if (client[x].active == false){
-            cout << "Y_STATIC: " + to_string(y_static) << endl;
+        if (client[x].active == false && y_static != -1){
+            //cout << "Y_STATIC: " + to_string(y_static) << endl;
             client[x].build(chair_posision[y_static].x, chair_posision[y_static].y);
             client[x].active = true;
             client[x].x += x * 20;
@@ -568,6 +599,7 @@ int main(){
     cout << "";
     InitWindow(window_w, window_h, "Game Jam");
     SetTargetFPS(60);
+    font = LoadFont("font/font.ttf");
     mount_point.build(window_w/2, 300, 50, 50);
     delivery_point.build(window_w/2 + 200, 300, 50, 50);
     ingredient_block1.build(300, 300, RED, 1, "Arroz cru");
@@ -576,9 +608,7 @@ int main(){
     trash_block.build(300, 450, BROWN);
     cook_block.build(window_w/2 - 50, 300, BEIGE);
     cook_block2.build(window_w/2 - 100, 300, BEIGE);
-    gen_client();
-    gen_client();
-    gen_client();
+    //HideCursor();
     while (!(WindowShouldClose())) {
         ClearBackground(RAYWHITE);
         BeginDrawing();
@@ -611,6 +641,9 @@ int main(){
             cook_block2.process();
             run_clients();
             check_collision();
+            if (IsKeyPressed(KEY_SPACE)){
+                gen_client();
+            }
         EndDrawing();
     }
     delete [] client;
