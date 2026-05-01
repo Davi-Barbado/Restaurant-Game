@@ -110,7 +110,7 @@ class Order{
         }
 };
 Player p1(window_w/2, window_h/2);
-int orders[10];
+int *orders = new int[999];
 int orders_lengh = 0;
 class Mount_block{
     private:
@@ -388,11 +388,11 @@ int clients_lengh = 0;
 class Client{
     private:
         float counter;
-        int order_id;
         int earn_points;
         int o;
         bool created;
     public:
+        int order_id;
         float timer;
         bool is_colliding;
         float x, y;
@@ -400,6 +400,7 @@ class Client{
         State state;
         Vector2 target;
         bool active = false;
+        int chair_id;
         void build(float target_x, float target_y){
             x = window_w - 10;
             y =  window_h/2 - 200;
@@ -413,9 +414,11 @@ class Client{
             created = false;
             is_colliding = false;
             timer = 0;
+            chair_id = -1;
         }
         void draw(){
             DrawRectangle(x, y, 10, 10, GRAY);
+            //DrawText(to_string(order_id).c_str(), 0, 0, 30, BLUE);
             //DrawRectangle(target.x, target.y, 10, 10, RED);
         }
         void process(){
@@ -453,12 +456,13 @@ class Client{
                     else{
                         counter += GetFrameTime();
                         timer += GetFrameTime();
-                        cout << counter << endl;
+                        // cout << counter << endl;
                     }
                     if (counter >= 360.0f){
                         earn_points = 2;
                         state = ANGRY;
                         counter = 0.0f;
+                        timer = 0.0f;
                     }
                     if (order_id != -1){
                         if (orders[order_id] == 0){
@@ -468,6 +472,7 @@ class Client{
                     break;
                 case ANGRY:
                     counter += GetFrameTime();
+                    timer += GetFrameTime() * 2.5;
                     if (counter >= 100.0f){
                         earn_points = -5;
                         state = LEAVING;
@@ -501,9 +506,6 @@ class Client{
                     break;
             }
         }
-        void push(){
-            x += 20;
-        }
 };
 const char* GetOrderName(int o){
     const char* order_name = "";
@@ -520,22 +522,28 @@ void Draw_Orders(){
     for (int x = 0; x < orders_lengh; x++){
         if (orders[x] != 0){
             DrawTextEx(font,GetOrderName(orders[x]), {0, 50.0f * x}, 30,5, BLACK);
-            string s = TextFormat("Time: %.0f", client[x].timer);
-            const char* s_c = s.c_str();
+            //string s = TextFormat("Time: %.0f", client[x].timer);
+            //const char* s_c = s.c_str();
             //DrawText(s_c, MeasureText(GetOrderName(orders[x]), 30) + 2, 30 * x, 30, BLACK);
             Color c;
-            if (client[x].timer < 180){
-                c = BLUE;
+            if (client[x].state == Client::WAITING){
+                if (client[x].timer < 180){
+                    c = BLUE;
+                }
+                else if (client[x].timer > 180 && client[x].timer < 270){
+                    c = YELLOW;
+                }
+                else{
+                    c = RED;
+                }
             }
-            else if (client[x].timer > 180 && client[x].timer < 270){
-                c = YELLOW;
-            }
-            else{
+            else if (client[x].state == Client::ANGRY){
                 c = RED;
             }
             DrawRectanglePro({(float)MeasureText(GetOrderName(orders[x]), 30) + 20, 50.0f * x + 20, 5, 20}, {5.0f/2, 20.0f}, client[x].timer, c);
             //DrawRectanglePro({(float)GetMouseX(), (float)GetMouseY(), 20,20}, {20.0f/2,20.0f/2}, 0, BLUE);
         }
+        cout << orders[x] << endl;
     }
 }
 Mount_block mount_point;
@@ -569,6 +577,7 @@ void gen_client(){
             client[x].build(chair_posision[y_static].x, chair_posision[y_static].y);
             client[x].active = true;
             client[x].x += x * 20;
+            client[x].chair_id = y_static;
             return;
         }
     }
@@ -595,8 +604,30 @@ void check_collision(){
         }
     }
 }
+void check_void_chairs(){
+    for (int x = 0; x < CLIENTS_LENGH; x++){
+        if (client[x].state == Client::LEAVING){
+            chairs_logical[client[x].chair_id] = false;
+        }
+    }
+}
+void refresh_order(){
+    for (int x = 999; x >= 0; x--){
+        int id_current = x;
+        int id_next = x - 1 > 0 ? x - 1: x;
+        int order_current = orders[id_current];
+        if (orders[id_current] != 0 && orders[id_next] == 0){
+            orders[id_next] = order_current; 
+            client[x].order_id = id_next;
+            orders[id_current] = 0;
+        }
+    }
+}
 int main(){
     cout << "";
+    for (int x = 0; x < 999; x++){
+        orders[x] = 0;
+    }
     InitWindow(window_w, window_h, "Game Jam");
     SetTargetFPS(60);
     font = LoadFont("font/font.ttf");
@@ -612,14 +643,7 @@ int main(){
     while (!(WindowShouldClose())) {
         ClearBackground(RAYWHITE);
         BeginDrawing();
-            int MPOSX = GetMouseX();
-            int MPOSY = GetMouseY();
-            string MPOSSF = "X: " + to_string(MPOSX) + "Y: " + to_string(MPOSY);
-            const char* MPOSSFCS = MPOSSF.c_str();
-            DrawText(MPOSSFCS, 0, window_h - 20, 20, BLUE);
-            string s = to_string(points);
-            const char* s_c = s.c_str();
-            DrawText(s_c, window_w - MeasureText(s_c, 30), 0, 30, BLUE);
+            DrawText(to_string(points).c_str(), window_w - MeasureText(to_string(points).c_str(), 30), 0, 30, BLUE);
             p1.draw();
             p1.process();
             Draw_Orders();
@@ -641,11 +665,14 @@ int main(){
             cook_block2.process();
             run_clients();
             check_collision();
+            check_void_chairs();
             if (IsKeyPressed(KEY_SPACE)){
                 gen_client();
             }
+            //refresh_order();
         EndDrawing();
     }
     delete [] client;
+    delete [] orders;
     CloseWindow();
 }
