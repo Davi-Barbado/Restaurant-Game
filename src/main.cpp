@@ -94,12 +94,13 @@ class Player{
 class Order{
     public:
         int n1, n2, n3, n4, n5;
+        int random_numid;
         void build(int n1_, int n2_, int n3_, int n4_, int n5_){
             n1 = n1_;
             n2 = n2_;
             n3 = n3_;
             n4 = n4_;
-            n5 = n5_; 
+            n5 = n5_;
         }
         void reset(){
             n1 = 0;
@@ -424,6 +425,7 @@ class Client{
         void process(){
             switch (state) {
                 case SEARCHING:
+                    timer += GetFrameTime();
                     if (x != target.x && !(is_colliding)){
                         x -= 2;
                     }
@@ -438,8 +440,9 @@ class Client{
                             }
                         }
                         else if (x == target.x && y == target.y){
-                            state = WAITING;
                             counter = 0.0f;
+                            timer = 0.0f;
+                            state = WAITING;
                         }
                     }
                     break;
@@ -460,9 +463,9 @@ class Client{
                     }
                     if (counter >= 360.0f){
                         earn_points = 2;
-                        state = ANGRY;
                         counter = 0.0f;
                         timer = 0.0f;
+                        state = ANGRY;
                     }
                     if (order_id != -1){
                         if (orders[order_id] == 0){
@@ -484,6 +487,7 @@ class Client{
                     }
                     break;
                 case LEAVING:
+                    timer += GetFrameTime();
                     if (y != window_h/2 - 200 && !(is_colliding)){
                         if (y < window_h/2 - 200){
                             y += 2;
@@ -520,12 +524,12 @@ const char* GetOrderName(int o){
 Client *client = new Client[10];
 void Draw_Orders(){
     for (int x = 0; x < orders_lengh; x++){
-        if (orders[x] != 0){
+        if (orders[x] != 0 && client[x].active == true){
             DrawTextEx(font,GetOrderName(orders[x]), {0, 50.0f * x}, 30,5, BLACK);
             //string s = TextFormat("Time: %.0f", client[x].timer);
             //const char* s_c = s.c_str();
             //DrawText(s_c, MeasureText(GetOrderName(orders[x]), 30) + 2, 30 * x, 30, BLACK);
-            Color c;
+            Color c = BLUE;
             if (client[x].state == Client::WAITING){
                 if (client[x].timer < 180){
                     c = BLUE;
@@ -542,8 +546,9 @@ void Draw_Orders(){
             }
             DrawRectanglePro({(float)MeasureText(GetOrderName(orders[x]), 30) + 20, 50.0f * x + 20, 5, 20}, {5.0f/2, 20.0f}, client[x].timer, c);
             //DrawRectanglePro({(float)GetMouseX(), (float)GetMouseY(), 20,20}, {20.0f/2,20.0f/2}, 0, BLUE);
+            //DrawText(to_string(client[x].timer).c_str(), 0, 50.0f * x + 20, 40, ORANGE);
         }
-        cout << orders[x] << endl;
+        //cout << orders[x] << endl;
     }
 }
 Mount_block mount_point;
@@ -606,20 +611,28 @@ void check_collision(){
 }
 void check_void_chairs(){
     for (int x = 0; x < CLIENTS_LENGH; x++){
-        if (client[x].state == Client::LEAVING){
+        if (client[x].state == Client::LEAVING && client[x].active == true){
             chairs_logical[client[x].chair_id] = false;
         }
     }
 }
 void refresh_order(){
-    for (int x = 999; x >= 0; x--){
-        int id_current = x;
-        int id_next = x - 1 > 0 ? x - 1: x;
-        int order_current = orders[id_current];
-        if (orders[id_current] != 0 && orders[id_next] == 0){
-            orders[id_next] = order_current; 
-            client[x].order_id = id_next;
-            orders[id_current] = 0;
+    for (int x = 0; x < 999; x++){
+        int index_actual = x;
+        int index_next = x + 1;
+        int order_actual = orders[index_actual];
+        int order_next = orders[index_next];
+        if (order_actual == 0 && order_next != 0){
+            for (int y = 0; y < CLIENTS_LENGH; y++){
+                if (client[y].active == true){
+                    if (client[y].order_id == order_next){
+                        client[y].order_id = order_actual;
+                        //orders[index_next] = 0;
+                    }
+                }
+            }
+            orders[index_actual] = order_next;
+            orders[index_next] = 0;
         }
     }
 }
@@ -669,7 +682,9 @@ int main(){
             if (IsKeyPressed(KEY_SPACE)){
                 gen_client();
             }
-            //refresh_order();
+            if (IsKeyPressed(KEY_H)){
+                refresh_order();
+            }
         EndDrawing();
     }
     delete [] client;
