@@ -523,9 +523,10 @@ const char* GetOrderName(int o){
 }
 Client *client = new Client[10];
 void Draw_Orders(){
-    for (int x = 0; x < orders_lengh; x++){
-        if (orders[x] != 0 && client[x].active == true){
-            DrawTextEx(font,GetOrderName(orders[x]), {0, 50.0f * x}, 30,5, BLACK);
+    int y = 0;
+    for (int x = 0; x < 999; x++){
+        if (orders[x] != 0){
+            DrawTextEx(font,GetOrderName(orders[x]), {0, 50.0f * y}, 30,5, BLACK);
             //string s = TextFormat("Time: %.0f", client[x].timer);
             //const char* s_c = s.c_str();
             //DrawText(s_c, MeasureText(GetOrderName(orders[x]), 30) + 2, 30 * x, 30, BLACK);
@@ -544,9 +545,10 @@ void Draw_Orders(){
             else if (client[x].state == Client::ANGRY){
                 c = RED;
             }
-            DrawRectanglePro({(float)MeasureText(GetOrderName(orders[x]), 30) + 20, 50.0f * x + 20, 5, 20}, {5.0f/2, 20.0f}, client[x].timer, c);
+            DrawRectanglePro({(float)MeasureText(GetOrderName(orders[x]), 30) + 20, 50.0f * y + 20, 5, 20}, {5.0f/2, 20.0f}, client[x].timer, c);
             //DrawRectanglePro({(float)GetMouseX(), (float)GetMouseY(), 20,20}, {20.0f/2,20.0f/2}, 0, BLUE);
             //DrawText(to_string(client[x].timer).c_str(), 0, 50.0f * x + 20, 40, ORANGE);
+            y++;
         }
         //cout << orders[x] << endl;
     }
